@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulador de Tiro Parabólico</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --bg: #f4f7f6;
+            --text: #333;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.4rem;
+            text-align: center;
+            margin: 5px 0 15px 0;
+            color: var(--primary);
+        }
+        .canvas-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .results {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        .result-item {
+            text-align: center;
+        }
+        .result-value {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        .result-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        .controls {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 15px 15px 5px 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        /* Deslizadores optimizados para uso táctil */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 32px;
+            width: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            margin-top: -11px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 10px;
+            cursor: pointer;
+            background: #ddd;
+            border-radius: 5px;
+        }
+        .questions {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-left: 5px solid var(--primary);
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .questions h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            color: var(--primary);
+        }
+        .questions ol {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        .questions li {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Simulador de Tiro Parabólico</h1>
+
+    <!-- Contenedor del lienzo gráfico -->
+    <div class="canvas-container">
+        <!-- Tamaño lógico: 600x300px representa 100m (ancho) por 50m (alto) -->
+        <canvas id="simCanvas" width="600" height="300"></canvas>
+    </div>
+
+    <!-- Resultados -->
+    <div class="results">
+        <div class="result-item">
+            <div class="result-value" id="valMaxHeight">0.00</div>
+            <div class="result-label">Altura máx (m)</div>
+        </div>
+        <div class="result-item">
+            <div class="result-value" id="valRange">0.00</div>
+            <div class="result-label">Alcance (m)</div>
+        </div>
+        <div class="result-item">
+            <div class="result-value" id="valTime">0.00</div>
+            <div class="result-label">Tiempo (s)</div>
+        </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="controls">
+        <div class="control-group">
+            <div class="control-header">
+                <span>Rapidez Inicial (v₀)</span>
+                <span id="speedDisplay" style="color: #0056b3;">15 m/s</span>
+            </div>
+            <input type="range" id="speedSlider" min="0" max="30" step="1" value="15">
+        </div>
+        <div class="control-group">
+            <div class="control-header">
+                <span>Ángulo (θ)</span>
+                <span id="angleDisplay" style="color: #0056b3;">45°</span>
+            </div>
+            <input type="range" id="angleSlider" min="0" max="90" step="1" value="45">
+        </div>
+    </div>
+
+    <!-- Preguntas de Reflexión -->
+    <div class="questions">
+        <h2>Reflexión de Física (3° BGU)</h2>
+        <ol>
+            <li>Fija la rapidez en 20 m/s. ¿Con qué ángulo exacto logras el <strong>mayor alcance horizontal</strong> y por qué sucede esto físicamente?</li>
+            <li>Con la misma rapidez, compara el alcance obtenido usando un ángulo de 30° y luego uno de 60°. ¿Qué patrón notas? ¿Ocurre lo mismo si usas 20° y 70°?</li>
+            <li>Observa los datos calculados. ¿Qué ocurre con la <strong>altura máxima</strong> y el <strong>tiempo de vuelo</strong> a medida que el ángulo se acerca a los 90°?</li>
+        </ol>
+    </div>
+
+    <script>
+        // Referencias a elementos del DOM
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const speedSlider = document.getElementById('speedSlider');
+        const angleSlider = document.getElementById('angleSlider');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const angleDisplay = document.getElementById('angleDisplay');
+        
+        const valMaxHeight = document.getElementById('valMaxHeight');
+        const valRange = document.getElementById('valRange');
+        const valTime = document.getElementById('valTime');
+
+        // Constantes Físicas
+        const g = 9.8; // Gravedad terrestre en m/s²
+        
+        // Escala del Canvas (Metros a Píxeles)
+        // Ancho máximo teórico (30m/s a 45°): ~91.8m -> Renderizamos 100m en 600px (6 px/m)
+        // Alto máximo teórico (30m/s a 90°): ~45.9m -> Renderizamos 50m en 300px (6 px/m)
+        const scale = 6; 
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const originX = 15; // Margen izquierdo
+        const originY = canvasHeight - 15; // Margen inferior
+
+        function updateSimulation() {
+            const v0 = parseFloat(speedSlider.value);
+            const angleDeg = parseFloat(angleSlider.value);
+            
+            speedDisplay.innerText = v0 + " m/s";
+            angleDisplay.innerText = angleDeg + "°";
+
+            const angleRad = angleDeg * Math.PI / 180;
+            
+            // Componentes de la velocidad
+            const v0x = v0 * Math.cos(angleRad);
+            const v0y = v0 * Math.sin(angleRad);
+            
+            // Fórmulas cinemáticas
+            const time = (2 * v0y) / g; // Tiempo de vuelo total
+            const range = v0x * time;   // Alcance máximo horizontal
+            const maxHeight = (v0y * v0y) / (2 * g); // Altura máxima
+
+            // Actualización de la UI
+            valTime.innerText = time.toFixed(2);
+            valRange.innerText = range.toFixed(2);
+            valMaxHeight.innerText = maxHeight.toFixed(2);
+
+            drawTrajectory(v0x, v0y, range, maxHeight);
+        }
+
+        function drawTrajectory(v0x, v0y, range, maxHeight) {
+            // Limpiar lienzo
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Dibujar cuadrícula y ejes
+            drawGrid();
+
+            // Evitar dibujar si no hay movimiento
+            if (v0x === 0 && v0y === 0) return;
+
+            // Dibujar trayectoria del proyectil
+            ctx.beginPath();
+            ctx.strokeStyle = "#0056b3";
+            ctx.lineWidth = 3;
+            
+            let timeStep = 0.05;
+            let t = 0;
+            let isFirst = true;
+            const totalTime = (2 * v0y) / g;
+
+            while (t <= totalTime) {
+                let x = v0x * t;
+                let y = v0y * t - 0.5 * g * t * t;
+                
+                let px = originX + (x * scale);
+                let py = originY - (y * scale);
+
+                if (isFirst) {
+                    ctx.moveTo(px, py);
+                    isFirst = false;
+                } else {
+                    ctx.lineTo(px, py);
+                }
+                t += timeStep;
+            }
+            
+            // Asegurar que aterriza exactamente en el suelo (y = 0)
+            let finalPx = originX + (range * scale);
+            let finalPy = originY;
+            ctx.lineTo(finalPx, finalPy);
+            ctx.stroke();
+
+            // Marcar el punto de impacto final
+            ctx.beginPath();
+            ctx.fillStyle = "#dc3545"; // Rojo
+            ctx.arc(finalPx, finalPy, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Marcar la altura máxima (solo si hay elevación)
+            if (maxHeight > 0) {
+                let peakPx = originX + ((range / 2) * scale);
+                let peakPy = originY - (maxHeight * scale);
+                ctx.beginPath();
+                ctx.fillStyle = "#28a745"; // Verde
+                ctx.arc(peakPx, peakPy, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawGrid() {
+            ctx.beginPath();
+            ctx.strokeStyle = "#e0e0e0";
+            ctx.lineWidth = 1;
+
+            // Líneas verticales cada 10 metros
+            for(let x = 0; x <= 100; x += 10) {
+                let px = originX + (x * scale);
+                ctx.moveTo(px, 0);
+                ctx.lineTo(px, canvasHeight);
+            }
+            
+            // Líneas horizontales cada 10 metros
+            for(let y = 0; y <= 50; y += 10) {
+                let py = originY - (y * scale);
+                ctx.moveTo(0, py);
+                ctx.lineTo(canvasWidth, py);
+            }
+            ctx.stroke();
+
+            // Ejes Principales (X, Y)
+            ctx.beginPath();
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 2;
+            
+            ctx.moveTo(originX, originY);
+            ctx.lineTo(canvasWidth, originY); // Eje X
+            
+            ctx.moveTo(originX, originY);
+            ctx.lineTo(originX, 0); // Eje Y
+            ctx.stroke();
+            
+            // Etiquetas de Ejes
+            ctx.fillStyle = "#666";
+            ctx.font = "bold 12px sans-serif";
+            ctx.fillText("X (m)", canvasWidth - 40, originY - 8);
+            ctx.fillText("Y (m)", originX + 8, 15);
+        }
+
+        // Detectar interacción en los deslizadores
+        speedSlider.addEventListener('input', updateSimulation);
+        angleSlider.addEventListener('input', updateSimulation);
+
+        // Renderizado inicial
+        updateSimulation();
+    </script>
+</body>
+</html>
